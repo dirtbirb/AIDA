@@ -24,16 +24,16 @@ class Throttle(object):
         10: Independent
     '''
 
-    def __init__(self, port, max_pressure, baud=9600, timeout=1,
+    def __init__(self, max_pressure, port=None, baud=None, timeout=1,
                  line_term='\r\n', debug=False):
-        self.debug = debug      # Output serial communication to console
+        ''' Init and optionally save parameters for serial connection later '''
+        self.debug = debug          # Output serial communication to console
         self.port = port
         self.baud = baud
         self.timeout = timeout
         self.line_term = line_term
-        self.max_pressure = float(max_pressure)
+        self.max_pressure = max_pressure
         self.ser = None
-        self.Connect()  # Disable to decouple connection from object creation
 
     def __send(self, cmd):
         ''' Internal function to format and send serial commands '''
@@ -49,67 +49,37 @@ class Throttle(object):
             if self.debug:
                 print("< " + ret)
         else:
-            raise serial.SerialException("Throttle: Can't read; not connected")
+            ret = None
         return ret
 
-    def Connect(self, port=None, baud=None, timeout=None, line_term=None):
-        ''' Can allow serial connection after object creation '''
+    def connect(self, port=None, baud=None, timeout=None, line_term=None):
+        ''' Allows serial connection after object creation '''
         if self.ser:
-            raise serial.SerialException("Throttle: Already connected")
+            raise serial.SerialException("Already connected!")
         self.port = port or self.port
         self.baud = baud or self.baud
         self.timeout = timeout or self.timeout
         self.line_term = line_term or self.line_term
         self.ser = serial.Serial(self.port, self.baud, timeout=self.timeout)
 
-    def Disconnect(self):
+    def disconnect(self):
         ''' Close serial connection '''
         if self.ser:
             self.ser.close()
         self.ser = None
 
-    def Open(self, soft=False, step_size=None, step_delay=None):
-        ''' Open throttle valve, optionally in steps'''
-        if soft:
-            self.Move(90.0, soft, step_size, step_delay)
-        else:
-            self.__send('O')
-
-    def Close(self, soft=False, step_size=None, step_delay=None):
+    def close(self, soft=False, step_size=None, step_delay=None):
         ''' Close throttle valve, optionally in steps '''
         if soft:
-            self.Move(0.0, soft, step_size, step_delay)
+            self.move(0.0, soft, step_size, step_delay)
         else:
             self.__send('C')
 
-    def softOpen(self, step_size=None, step_delay=None):
-        ''' Open throttle valve, optionally in steps'''
-        self.Open(90.0, soft=True, step_size, step_delay)
-
-    def getPosition(self):
-        self.__send('R6')
-        return float(self.__read()[1:])
-
-    def setPosition(self, pos):
-        ''' Overrides pressure control until pressure setpoint is given '''
-        self.__send('P' + str(float(pos)))
-
-    def getPressureSetpoint(self):
-        self.__send('R1')
-        # Use [2:] if dipswitch 2 is on
-        return float(self.__read()[1:]) * max_pressure / 100.0
-
-    def setPressure(self, setpoint):
-        ''' Resumes analog pressure control if previously overriden '''
-        self.__send('A')
-        # Use 'S1' if dipswitch 2 is on
-        self.__send('S' + str(100.0 * float(setpoint) / max_pressure))
-
-    def Hold(self):
+    def hold(self):
         ''' Hold throttle at current position until further instructions '''
         self.__send('H')
 
-    def Move(self, target, soft=False, step_size=1.0, step_delay=1.0):
+    def move(self, target, soft=False, step_size=1.0, step_delay=1.0):
         ''' Move the throttle valve to target position.
             If soft == True, valve will move to target in steps defined by
             step_size and step_delay. '''
@@ -130,25 +100,58 @@ class Throttle(object):
             # Move directly to target postion
             self.position = target
 
-    def getGain(self):
+    def open(self, soft=False, step_size=None, step_delay=None):
+        ''' Open throttle valve, optionally in steps'''
+        if soft:
+            self.move(90.0, soft, step_size, step_delay)
+        else:
+            self.__send('O')
+
+    @property
+    def gain(self):
         ''' Returns gain value in percent '''
         self.__send('R2')
         return float(self.__read()[1:])
 
-    def setGain(self, gain):
-        self.__send('G' + float(gain))
+    @gain.setter
+    def gain(self, v):
+        self.__send('G' + float(v))
 
-    def getLead(self):
+    @property
+    def lead(self):
         ''' Returns lead value in percent '''
         self.__send('R3')
         return float(self.__read()[1:])
 
-    def setLead(self, lead):
-        self.__send('L' + float(lead))
+    @lead.setter
+    def lead(self, v):
+        self.__send('L' + float(v))
+
+    @property
+    def position(self):
+        self.__send('R6')
+        return float(self.__read()[1:])
+
+    @position.setter
+    def position(self, pos):
+        ''' Overrides pressure control until pressure setpoint is given '''
+        self.__send('P' + str(float(pos)))
+
+    @property
+    def pressure(self):
+        self.__send('R1')
+        # Use [2:] if dipswitch 2 is on
+        return float(self.__read()[1:]) * max_pressure / 100.0
+
+    @pressure.setter
+    def pressure(self, setpoint):
+        ''' Resumes analog pressure control if previously overriden '''
+        self.__send('A')
+        # Use 'S1' if dipswitch 2 is on
+        self.__send('S' + str(100.0 * setpoint / max_pressure))
 
 
-if __name__ == '__main__':
-    throttle = Throttle('COM5', 9600, 1, debug=True)
-    throttle.Connect()
-    throttle.Move(45.0, True)
-    throttle.Disconnect()
+throttle = Throttle('COM5', 9600, 1, debug=True)
+throttle.connect()
+throttle.move(0.0, True)
+throttle.disconnect()
