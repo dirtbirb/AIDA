@@ -83,7 +83,7 @@ class Throttle(object):
             self.__send('C')
 
     def softOpen(self, step_size=None, step_delay=None):
-        ''' Open throttle valve, optionally in steps'''
+        ''' Alias for Open(soft=True) '''
         self.Open(90.0, True, step_size, step_delay)
 
     def getPosition(self):
