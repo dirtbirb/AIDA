@@ -40,7 +40,7 @@ class Throttle(object):
         if self.ser:
             if self.debug:
                 print("> " + cmd)
-            self.ser.write((cmd + self.line_terminator).encode())
+            self.ser.write((cmd + self.line_term).encode())
 
     def __read(self):
         ''' Internal function to read and return serial responses '''
@@ -84,7 +84,7 @@ class Throttle(object):
 
     def softOpen(self, step_size=None, step_delay=None):
         ''' Open throttle valve, optionally in steps'''
-        self.Open(90.0, soft=True, step_size, step_delay)
+        self.Open(90.0, True, step_size, step_delay)
 
     def getPosition(self):
         self.__send('R6')
@@ -97,13 +97,13 @@ class Throttle(object):
     def getPressureSetpoint(self):
         self.__send('R1')
         # Use [2:] if dipswitch 2 is on
-        return float(self.__read()[1:]) * max_pressure / 100.0
+        return float(self.__read()[1:]) * self.max_pressure / 100.0
 
     def setPressure(self, setpoint):
         ''' Resumes analog pressure control if previously overriden '''
         self.__send('A')
         # Use 'S1' if dipswitch 2 is on
-        self.__send('S' + str(100.0 * float(setpoint) / max_pressure))
+        self.__send('S' + str(100.0 * float(setpoint) / self.max_pressure))
 
     def Hold(self):
         ''' Hold throttle at current position until further instructions '''
@@ -115,20 +115,21 @@ class Throttle(object):
             step_size and step_delay. '''
         if soft:
             # Move to target position in steps
-            p = self.position
-            while abs(p - target) >= 0.1:
+            p = self.getPosition()
+            while abs(target - p) > 1.1:
                 step = target - p           # Calculate next position
                 if abs(step) >= step_size:
                     step = step * step_size / abs(step)
                 next_pos = p + step
-                self.position = next_pos    # Move to next position
-                while abs(p - next_pos) >= 0.1:
-                    p = self.position
+                self.setPosition(next_pos)    # Move to next position
+                while abs(next_pos - p) > 1.1:
+                    p = self.getPosition()
                     time.sleep(0.1)
                 time.sleep(step_delay)      # Wait at current step
+                p = self.getPosition()
         else:
             # Move directly to target postion
-            self.position = target
+            self.setPosition(target)
 
     def getGain(self):
         ''' Returns gain value in percent '''
@@ -148,7 +149,9 @@ class Throttle(object):
 
 
 if __name__ == '__main__':
-    throttle = Throttle('COM5', 9600, 1, debug=True)
-    throttle.Connect()
-    throttle.Move(45.0, True)
+    throttle = Throttle('COM5', 1000, debug=True)
+    # throttle.Connect()
+    throttle.Move(65.0, True)
+    throttle.getPressureSetpoint()
+    throttle.setPressure('0.0')
     throttle.Disconnect()
