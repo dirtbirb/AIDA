@@ -147,6 +147,49 @@ class Throttle(object):
     def setLead(self, lead):
         self.__send('L' + float(lead))
 
+    # @property
+    # def gain(self):
+    #     ''' Returns gain value in percent '''
+    #     self.__send('R2')
+    #     return float(self.__read()[1:])
+    #
+    # @gain.setter
+    # def gain(self, v):
+    #     self.__send('G' + float(v))
+    #
+    # @property
+    # def lead(self):
+    #     ''' Returns lead value in percent '''
+    #     self.__send('R3')
+    #     return float(self.__read()[1:])
+    #
+    # @lead.setter
+    # def lead(self, v):
+    #     self.__send('L' + float(v))
+    #
+    # @property
+    # def position(self):
+    #     self.__send('R6')
+    #     return float(self.__read()[1:])
+    #
+    # @position.setter
+    # def position(self, pos):
+    #     ''' Overrides pressure control until pressure setpoint is given '''
+    #     self.__send('P' + str(float(pos)))
+    #
+    # @property
+    # def pressure(self):
+    #     self.__send('R1')
+    #     # Use [2:] if dipswitch 2 is on
+    #     return float(self.__read()[1:]) * max_pressure / 100.0
+    #
+    # @pressure.setter
+    # def pressure(self, setpoint):
+    #     ''' Resumes analog pressure control if previously overriden '''
+    #     self.__send('A')
+    #     # Use 'S1' if dipswitch 2 is on
+    #     self.__send('S' + str(100.0 * setpoint / max_pressure))
+
 
 if __name__ == '__main__':
     throttle = Throttle('COM5', 1000, debug=True)
